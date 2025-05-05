@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hit-Test Trainer</title>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    #status {
+      font-size: 2em;
+      margin: 20px 0;
+    }
+    #runde {
+      font-size: 1.2em;
+    }
+    #startBtn {
+      padding: 14px 28px;
+      font-size: 1.1em;
+      background-color: #22c55e;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 30px;
+    }
+    #startBtn:hover {
+      background-color: #16a34a;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏃‍♂️ Hit-Test Trainer</h1>
+  <div id="status">Bereit?</div>
+  <div id="runde">Runde: 0 / 40</div>
+  <button id="startBtn">Start</button>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const rundeEl = document.getElementById("runde");
+    const startBtn = document.getElementById("startBtn");
+
+    let currentRound = 0;
+
+    function playBeep(frequency = 880, duration = 0.2) {
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, context.currentTime);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + duration);
+    }
+
+    function countdown(callback) {
+      let count = 3;
+      statusEl.textContent = "Start in: 3";
+      const interval = setInterval(() => {
+        count--;
+        if (count === 0) {
+          clearInterval(interval);
+          playBeep(1000, 0.3); // Start-Ton
+          callback();
+        } else {
+          statusEl.textContent = "Start in: " + count;
+          playBeep(600, 0.1);
+        }
+      }, 1000);
+    }
+
+    function startHitTest() {
+      currentRound = 0;
+      runRound();
+    }
+
+    function runRound() {
+      if (currentRound >= 40) {
+        statusEl.textContent = "✅ Test abgeschlossen!";
+        rundeEl.textContent = "Runde: 40 / 40";
+        return;
+      }
+
+      currentRound++;
+      rundeEl.textContent = `Runde: ${currentRound} / 40`;
+
+      // Laufphase
+      statusEl.textContent = "🏃 Laufphase (75 m)";
+      playBeep(1000, 0.3); // Start-Piep
+      setTimeout(() => playBeep(800, 0.1), 10000); // kurzer Pip nach 10 Sek
+      setTimeout(() => playBeep(600, 0.5), 15000); // langer Pip nach 15 Sek
+
+      setTimeout(() => {
+        // Gehphase
+        statusEl.textContent = "🚶 Gehphase (25 m)";
+        playBeep(1000, 0.1); // Übergang
+        setTimeout(() => playBeep(800, 0.1), 13000); // kurzer Pip nach 13 Sek
+        setTimeout(() => playBeep(600, 0.5), 18000); // langer Pip nach 18 Sek
+
+        setTimeout(() => {
+          runRound(); // nächste Runde starten
+        }, 18000);
+      }, 15000);
+    }
+
+    startBtn.onclick = () => {
+      startBtn.style.display = "none";
+      countdown(startHitTest);
+    };
+  </script>
+
+</body>
+</html>
