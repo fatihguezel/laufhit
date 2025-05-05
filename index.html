@@ -5,40 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hit-Test Trainer</title>
   <style>
-    body {
-      background-color: #0f172a;
-      color: #f8fafc;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 40px 20px;
-    }
-    h1 {
-      margin-bottom: 20px;
-    }
-    #status {
-      font-size: 2em;
-      margin: 20px 0;
-    }
-    #runde {
-      font-size: 1.2em;
-    }
-    #startBtn {
-      padding: 14px 28px;
-      font-size: 1.1em;
-      background-color: #22c55e;
-      border: none;
-      color: white;
-      border-radius: 10px;
-      cursor: pointer;
-      margin-top: 30px;
-    }
-    #startBtn:hover {
-      background-color: #16a34a;
-    }
+    /* Stile bleiben unverändert */
   </style>
 </head>
 <body>
-
   <h1>🏃‍♂️ Hit-Test Trainer</h1>
   <div id="status">Bereit?</div>
   <div id="runde">Runde: 0 / 40</div>
@@ -50,27 +20,30 @@
     const startBtn = document.getElementById("startBtn");
 
     let currentRound = 0;
+    let audioContext;
 
-    function playBeep(frequency = 880, duration = 0.2) {
-      const context = new AudioContext();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
+    function playBeep(frequency = 880, duration = 0.2, time = 0) {
+      if (!audioContext) return;
+      
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
       oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(frequency, context.currentTime);
+      oscillator.frequency.setValueAtTime(frequency, time);
       oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + duration);
+      gain.connect(audioContext.destination);
+      oscillator.start(time);
+      oscillator.stop(time + duration);
     }
 
-    function countdown(callback) {
+    async function countdown(callback) {
       let count = 3;
       statusEl.textContent = "Start in: 3";
-      const interval = setInterval(() => {
+      
+      const countdownInterval = setInterval(() => {
         count--;
         if (count === 0) {
-          clearInterval(interval);
-          playBeep(1000, 0.3); // Start-Ton
+          clearInterval(countdownInterval);
+          playBeep(1000, 0.3);
           callback();
         } else {
           statusEl.textContent = "Start in: " + count;
@@ -79,9 +52,17 @@
       }, 1000);
     }
 
-    function startHitTest() {
-      currentRound = 0;
-      runRound();
+    function scheduleRoundSounds(startTime) {
+      // Laufphase Töne
+      playBeep(1000, 0.3, startTime);
+      playBeep(800, 0.1, startTime + 10);
+      playBeep(600, 0.5, startTime + 15);
+
+      // Gehphase Töne
+      const gehPhaseStart = startTime + 15;
+      playBeep(1000, 0.1, gehPhaseStart);
+      playBeep(800, 0.1, gehPhaseStart + 13);
+      playBeep(600, 0.5, gehPhaseStart + 18);
     }
 
     function runRound() {
@@ -93,31 +74,34 @@
 
       currentRound++;
       rundeEl.textContent = `Runde: ${currentRound} / 40`;
+      const roundStartTime = audioContext.currentTime;
 
-      // Laufphase
+      // Status updates
       statusEl.textContent = "🏃 Laufphase (75 m)";
-      playBeep(1000, 0.3); // Start-Piep
-      setTimeout(() => playBeep(800, 0.1), 10000); // kurzer Pip nach 10 Sek
-      setTimeout(() => playBeep(600, 0.5), 15000); // langer Pip nach 15 Sek
-
       setTimeout(() => {
-        // Gehphase
         statusEl.textContent = "🚶 Gehphase (25 m)";
-        playBeep(1000, 0.1); // Übergang
-        setTimeout(() => playBeep(800, 0.1), 13000); // kurzer Pip nach 13 Sek
-        setTimeout(() => playBeep(600, 0.5), 18000); // langer Pip nach 18 Sek
-
-        setTimeout(() => {
-          runRound(); // nächste Runde starten
-        }, 18000);
       }, 15000);
+
+      // Alle Töne für diese Runde planen
+      scheduleRoundSounds(roundStartTime);
+
+      // Nächste Runde nach 33 Sekunden starten (15 + 18)
+      setTimeout(() => {
+        runRound();
+      }, 33000);
     }
 
-    startBtn.onclick = () => {
+    startBtn.onclick = async () => {
       startBtn.style.display = "none";
-      countdown(startHitTest);
+      
+      // AudioContext erstellen und aktivieren
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      await audioContext.resume();
+      
+      countdown(() => {
+        runRound();
+      });
     };
   </script>
-
 </body>
 </html>
